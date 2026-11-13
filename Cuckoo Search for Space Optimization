@@ -1,0 +1,35 @@
+import numpy as np
+from math import gamma, pi, sin
+
+def levy(dim, beta=1.5):
+    s = (gamma(1+beta)*sin(pi*beta/2) / (gamma((1+beta)/2)*beta*2**((beta-1)/2)))**(1/beta)
+    return np.random.normal(0, s, dim) / np.abs(np.random.normal(0, 1, dim))**(1/beta)
+
+def sts(X, F, f, lb, ub, lo, hi):
+    """Mirror nests across the space center, keep best n."""
+    O = np.clip(np.random.rand()*(lo+hi) - X, lb, ub)
+    A, FA = np.vstack((X, O)), np.concatenate((F, [f(o) for o in O]))
+    i = np.argsort(FA)[:len(X)]
+    return A[i], FA[i]
+
+def cs_sts(f, dim, lb, ub, n=25, pa=0.25, T=500, alpha=0.01, jump=0.3):
+    X = lb + np.random.rand(n, dim)*(ub-lb)
+    F = np.array([f(x) for x in X])
+    X, F = sts(X, F, f, lb, ub, lb, ub)
+    for _ in range(T):
+        b = X[F.argmin()]
+        for i in range(n):
+            new = np.clip(X[i] + alpha*levy(dim)*(X[i]-b), lb, ub)
+            if f(new) < F[i]: X[i], F[i] = new, f(new)
+        for i in range(n):                        
+            if np.random.rand() < pa:
+                j, k = np.random.permutation(n)[:2]
+                new = np.clip(X[i] + np.random.rand()*(X[j]-X[k]), lb, ub)
+                if f(new) < F[i]: X[i], F[i] = new, f(new)
+        if np.random.rand() < jump:               
+            X, F = sts(X, F, f, lb, ub, X.min(0), X.max(0))
+    return X[F.argmin()], F.min()
+
+sphere = lambda x: np.sum(x**2)
+best, fit = cs_sts(sphere, dim=10, lb=-5.12, ub=5.12)
+print("Best:", best, "\nFitness:", fit)
