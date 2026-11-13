@@ -1,0 +1,49 @@
+import heapq, random
+
+graph = {
+    'A': {'B':7, 'C':9, 'F':14}, 'B': {'A':7, 'C':10, 'D':15},
+    'C': {'A':9, 'B':10, 'D':11, 'F':2}, 'D': {'B':15, 'C':11, 'E':6},
+    'E': {'D':6, 'F':9}, 'F': {'A':14, 'C':2, 'E':9}
+}
+cities = ['A', 'B', 'D', 'E', 'F']
+n = len(cities)
+
+def dijkstra(src):
+    d = {v: float('inf') for v in graph}; d[src] = 0
+    pq = [(0, src)]
+    while pq:
+        du, u = heapq.heappop(pq)
+        if du > d[u]: continue
+        for v, w in graph[u].items():
+            if du + w < d[v]:
+                d[v] = du + w
+                heapq.heappush(pq, (d[v], v))
+    return d
+
+D = [[dijkstra(a)[b] for b in cities] for a in cities]
+
+ants, iters, alpha, beta, rho, Q = 10, 50, 1, 3, 0.5, 100
+tau = [[1.0]*n for _ in range(n)]
+length = lambda t: sum(D[t[i]][t[(i+1) % n]] for i in range(n))
+
+best, best_len = None, float('inf')
+for _ in range(iters):
+    tours = []
+    for _ in range(ants):
+        t = [random.randrange(n)]
+        while len(t) < n:
+            i = t[-1]
+            c = [j for j in range(n) if j not in t]
+            w = [tau[i][j]**alpha * (1/D[i][j])**beta for j in c]
+            t.append(random.choices(c, w)[0])
+        tours.append(t)
+    tau = [[x*(1-rho) for x in row] for row in tau]          
+    for t in tours:
+        L = length(t)
+        if L < best_len: best, best_len = t, L
+        for i in range(n):                                   
+            a, b = t[i], t[(i+1) % n]
+            tau[a][b] += Q/L; tau[b][a] += Q/L
+
+print("Best order:", [cities[i] for i in best] + [cities[best[0]]])
+print("Total distance:", best_len)
