@@ -1,0 +1,50 @@
+import numpy as np
+
+N = 10
+K = 3
+Max_iter = 30
+
+nodes = np.random.rand(N, 2) * 100
+sink = np.array([50, 100])
+
+def fitness(wolf):
+    ch = np.argsort(wolf)[-K:]
+    cost = 0
+
+    for i in range(N):
+        d = np.linalg.norm(nodes[i] - nodes[ch], axis=1)
+        cost += min(d)
+
+    return cost + sum(
+        np.linalg.norm(nodes[j] - sink) for j in ch
+    )
+
+wolves = np.random.rand(N, N)
+
+for t in range(Max_iter):
+
+    a = 2 - 2 * t / Max_iter
+    scores = np.array([fitness(w) for w in wolves])
+
+    order = np.argsort(scores)
+    alpha = wolves[order[0]].copy()
+    beta = wolves[order[1]].copy()
+    delta = wolves[order[2]].copy()
+
+    for i in range(N):
+        X = []
+
+        for leader in [alpha, beta, delta]:
+            A = 2 * a * np.random.rand(N) - a
+            C = 2 * np.random.rand(N)
+            D = abs(C * leader - wolves[i])
+            X.append(leader - A * D)
+
+        wolves[i] = np.clip(np.mean(X, axis=0), 0, 1)
+
+best = wolves[np.argmin([fitness(w) for w in wolves])]
+CH = np.argsort(best)[-K:]
+
+print("Selected Cluster Heads:", CH + 1)
+print("Best Fitness:", fitness(best))
+print("WSN Optimization Completed")
