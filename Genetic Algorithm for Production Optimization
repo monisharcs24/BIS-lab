@@ -1,0 +1,166 @@
+import random
+
+# Production optimization using a Genetic Algorithm
+
+PROFIT_A = 40
+PROFIT_B = 30
+
+MACHINE_A = 2
+MACHINE_B = 1
+
+LABOR_A = 1
+LABOR_B = 2
+
+MACHINE_LIMIT = 100
+LABOR_LIMIT = 80
+
+MAX_A = 50
+MAX_B = 50
+
+POPULATION_SIZE = 50
+GENERATIONS = 100
+CROSSOVER_RATE = 0.8
+MUTATION_RATE = 0.02
+
+BITS = 6
+CHROMOSOME_LENGTH = BITS * 2
+
+
+def decode(chromosome):
+    a = int(chromosome[:BITS], 2)
+    b = int(chromosome[BITS:], 2)
+    return a, b
+
+
+def calculate(a, b):
+    profit = PROFIT_A * a + PROFIT_B * b
+    machine = MACHINE_A * a + MACHINE_B * b
+    labor = LABOR_A * a + LABOR_B * b
+    return profit, machine, labor
+
+
+def fitness(chromosome):
+    a, b = decode(chromosome)
+
+    # Reject quantities exceeding demand
+    if a > MAX_A or b > MAX_B:
+        return 0
+
+    profit, machine, labor = calculate(a, b)
+
+    # Reject plans that exceed available resources
+    if machine > MACHINE_LIMIT or labor > LABOR_LIMIT:
+        return 0
+
+    return profit
+
+
+def create_population():
+    population = []
+
+    for _ in range(POPULATION_SIZE):
+        a = random.randint(0, MAX_A)
+        b = random.randint(0, MAX_B)
+
+        chromosome = format(a, f"0{BITS}b")
+        chromosome += format(b, f"0{BITS}b")
+
+        population.append(chromosome)
+
+    return population
+
+
+def selection(population):
+    candidates = random.sample(population, 3)
+    return max(candidates, key=fitness)
+
+
+def crossover(parent1, parent2):
+    if random.random() < CROSSOVER_RATE:
+        point = random.randint(1, CHROMOSOME_LENGTH - 1)
+
+        child1 = parent1[:point] + parent2[point:]
+        child2 = parent2[:point] + parent1[point:]
+
+        return child1, child2
+
+    return parent1, parent2
+
+
+def mutate(chromosome):
+    bits = list(chromosome)
+
+    for i in range(len(bits)):
+        if random.random() < MUTATION_RATE:
+            bits[i] = "1" if bits[i] == "0" else "0"
+
+    return "".join(bits)
+
+
+def genetic_algorithm():
+    population = create_population()
+
+    # Keep track of the best feasible solution
+    best_solution = min(
+        population,
+        key=lambda c: fitness(c)
+    )
+
+    for generation in range(GENERATIONS):
+        population.sort(key=fitness, reverse=True)
+
+        current_best = population[0]
+
+        if fitness(current_best) > fitness(best_solution):
+            best_solution = current_best
+
+        new_population = [current_best]  # Elitism
+
+        while len(new_population) < POPULATION_SIZE:
+            parent1 = selection(population)
+            parent2 = selection(population)
+
+            child1, child2 = crossover(parent1, parent2)
+
+            child1 = mutate(child1)
+            child2 = mutate(child2)
+
+            new_population.append(child1)
+
+            if len(new_population) < POPULATION_SIZE:
+                new_population.append(child2)
+
+        population = new_population
+
+        generation_best = max(population, key=fitness)
+
+        if fitness(generation_best) > fitness(best_solution):
+            best_solution = generation_best
+
+        if (generation + 1) % 10 == 0:
+            print(
+                f"Generation {generation + 1}: "
+                f"Best profit = {fitness(best_solution)}"
+            )
+
+    return best_solution
+
+
+if __name__ == "__main__":
+    random.seed(42)  # Reproducible example
+
+    solution = genetic_algorithm()
+    a, b = decode(solution)
+    profit, machine, labor = calculate(a, b)
+
+    print("\n--- Production Optimization Result ---")
+    print(f"Product A quantity : {a}")
+    print(f"Product B quantity : {b}")
+    print(f"Maximum profit     : Rs. {profit}")
+    print(f"Machine hours used : {machine}/{MACHINE_LIMIT}")
+    print(f"Labor hours used   : {labor}/{LABOR_LIMIT}")
+
+    if fitness(solution) > 0:
+        print("Status: Feasible production plan")
+    else:
+        print("Status: No feasible solution found")
