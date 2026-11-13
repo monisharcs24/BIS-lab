@@ -1,0 +1,23 @@
+
+import numpy as np
+
+f = lambda x: np.sum(x**2)
+n, d = 20, 2
+x = np.random.uniform(-10, 10, (n, d))
+v = np.random.rand(n, d)
+pbest = x.copy()
+gbest = x[np.argmin([f(i) for i in x])].copy()
+
+for _ in range(100):
+    for i in range(n):
+        v[i] = (0.7*v[i] + 1.5*np.random.rand(d)*(pbest[i]-x[i])
+                + 1.5*np.random.rand(d)*(gbest-x[i]))
+        x[i] = np.clip(x[i] + v[i], -10, 10)
+
+        if f(x[i]) < f(pbest[i]):
+            pbest[i] = x[i].copy()
+        if f(pbest[i]) < f(gbest):
+            gbest = pbest[i].copy()
+
+print("Best position:", gbest)
+print("Minimum value:", f(gbest))
