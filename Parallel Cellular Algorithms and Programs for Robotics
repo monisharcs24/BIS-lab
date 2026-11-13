@@ -1,0 +1,43 @@
+
+import numpy as np
+
+# 0 = Free, 1 = Obstacle
+grid = np.array([
+    [0, 0, 0, 0],
+    [0, 1, 1, 0],
+    [0, 0, 0, 0],
+    [0, 1, 0, 0]
+])
+
+start = (0, 0)
+goal = (3, 3)
+
+distance = np.full(grid.shape, 99)
+distance[goal] = 0
+
+# Update neighboring cells
+for _ in range(20):
+    new = distance.copy()
+
+    for r in range(4):
+        for c in range(4):
+            if grid[r,c] == 0:
+                values = [
+                    distance[nr,nc] + 1
+                    for nr,nc in [(r-1,c),(r+1,c),
+                                  (r,c-1),(r,c+1)]
+                    if 0 <= nr < 4 and 0 <= nc < 4
+                    and grid[nr,nc] == 0
+                ]
+                if values:
+                    new[r,c] = min(new[r,c], min(values))
+
+    if np.array_equal(new, distance):
+        break
+    distance = new
+
+# Display result
+print("Robot start:", start)
+print("Robot goal:", goal)
+print("Shortest distance:", distance[start])
+print("Distance Grid:\n", distance)
